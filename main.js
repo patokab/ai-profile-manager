@@ -139,6 +139,93 @@ document.addEventListener('DOMContentLoaded', () => {
   const promptInput = document.getElementById('prompt-input');
   const settingsForm = document.getElementById('settings-form');
   const apiKeyInput = document.getElementById('api-key-input');
+
+  // --- GROUP PERSONA GENERATION LOGIC START ---
+  const groupGenerateBtn = document.getElementById('group-generate-btn');
+  const groupModal = document.getElementById('group-generate-modal');
+  const closeGroupModal = document.getElementById('close-group-modal');
+  const groupForm = document.getElementById('group-generate-form');
+  const groupResults = document.getElementById('group-generate-results');
+
+  groupGenerateBtn.addEventListener('click', () => {
+    groupModal.classList.remove('hidden');
+    groupResults.innerHTML = '';
+  });
+  closeGroupModal.addEventListener('click', () => {
+    groupModal.classList.add('hidden');
+  });
+  groupModal.addEventListener('click', (e) => {
+    if (e.target === groupModal) groupModal.classList.add('hidden');
+  });
+
+  groupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    groupResults.innerHTML = '<div class="text-center text-gray-500">Generowanie person...</div>';
+    const count = parseInt(document.getElementById('group-count').value, 10);
+    const audience = document.getElementById('group-audience').value.trim();
+    const style = document.getElementById('group-style').value.trim();
+
+    // Build AI prompt for persona generation
+    const aiPrompt =
+      `Wygeneruj ${count} unikalnych person do social mediów (x.com/Twitter) dla grupy docelowej: "${audience}". ` +
+      `Każda persona powinna mieć: unikalny ID (krótki, bez spacji), opis persony (max 2 zdania), model telefonu, nazwę z social mediów (np. @przyklad), oraz 2-4 krótkie wspomnienia (każde jako osobny string). ` +
+      `Styl person: ${style}. ` +
+      `Zwróć wynik jako poprawny JSON array, gdzie każdy obiekt ma pola: id, persona, phone, social, memories (array of strings). Nie dodawaj żadnych komentarzy ani tekstu poza JSON!`;
+
+    try {
+      // Use the same callOpenAIAPI function, but with a dummy profile
+      const response = await callOpenAIAPI({}, aiPrompt, null);
+      // Try to find the first JSON array in the response
+      const match = response.match(/\[.*\]/s);
+      if (!match) throw new Error("Nie znaleziono poprawnego JSON array w odpowiedzi AI.");
+      const personas = JSON.parse(match[0]);
+      // Display results and add button to import
+      groupResults.innerHTML = `
+        <div class="mb-4 font-semibold">Wygenerowane persony:</div>
+        <ul class="mb-4 space-y-2">
+          ${personas.map(p => `
+            <li class="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow">
+              <div><b>ID:</b> ${p.id}</div>
+              <div><b>Persona:</b> ${p.persona}</div>
+              <div><b>Telefon:</b> ${p.phone}</div>
+              <div><b>Social:</b> ${p.social}</div>
+              <div><b>Wspomnienia:</b> <ul class="list-disc ml-5">${p.memories.map(m => `<li>${m}</li>`).join('')}</ul></div>
+            </li>
+          `).join('')}
+        </ul>
+        <button id="import-group-personas" class="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl w-full shadow font-semibold transition-all duration-200">Dodaj wszystkie do profili</button>
+      `;
+      document.getElementById('import-group-personas').onclick = () => {
+        personas.forEach(p => {
+          // Add to app's profile list (adapt as needed for your app's data structure)
+          const li = document.createElement('li');
+          li.className = "p-4 bg-white dark:bg-gray-800 rounded-xl shadow flex flex-col space-y-1";
+          li.innerHTML = `
+            <div><b>ID:</b> ${p.id}</div>
+            <div><b>Persona:</b> ${p.persona}</div>
+            <div><b>Telefon:</b> ${p.phone}</div>
+            <div><b>Social:</b> ${p.social}</div>
+            <div><b>Wspomnienia:</b> <ul class="list-disc ml-5">${p.memories.map(m => `<li>${m}</li>`).join('')}</ul></div>
+          `;
+          profileList.appendChild(li);
+          // Optionally, add to your app's internal data structure if needed
+          if (window.profiles) {
+            window.profiles.push({
+              id: p.id,
+              persona: p.persona,
+              phone: p.phone,
+              social: p.social,
+              memories: p.memories
+            });
+          }
+        });
+        groupModal.classList.add('hidden');
+      };
+    } catch (err) {
+      groupResults.innerHTML = `<div class="text-red-500">Błąd generowania lub parsowania odpowiedzi AI: ${err.message}</div>`;
+    }
+  });
+  // --- GROUP PERSONA GENERATION LOGIC END ---
   // Load saved API key
   const savedKey = localStorage.getItem('openaiApiKey');
   if (savedKey) {
