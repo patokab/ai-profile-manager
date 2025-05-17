@@ -1,5 +1,74 @@
 console.log("main.js loaded");
 document.addEventListener('DOMContentLoaded', () => {
+  // --- TRANSLATION LOGIC START ---
+  const translations = {
+    pl: {
+      appTitle: "AI Profile Manager",
+      tileGenerate: "Generowanie contentu",
+      tileProfiles: "Menedżer profili",
+      tileSettings: "Ustawienia",
+      backBtn: "Wróć do menu",
+      settingsTitle: "Ustawienia",
+      apiKeyPlaceholder: "Klucz API OpenAI",
+      saveApiKey: "Zapisz klucz",
+      darkMode: "Tryb nocny",
+      language: "Język",
+      profileTitle: "Profile",
+      profileIdPlaceholder: "ID profilu",
+      profilePersonaPlaceholder: "Opis persony",
+      profilePhonePlaceholder: "Model telefonu",
+      // Add more as needed
+    },
+    en: {
+      appTitle: "AI Profile Manager",
+      tileGenerate: "Content Generation",
+      tileProfiles: "Profile Manager",
+      tileSettings: "Settings",
+      backBtn: "Back to menu",
+      settingsTitle: "Settings",
+      apiKeyPlaceholder: "OpenAI API Key",
+      saveApiKey: "Save key",
+      darkMode: "Dark mode",
+      language: "Language",
+      profileTitle: "Profiles",
+      profileIdPlaceholder: "Profile ID",
+      profilePersonaPlaceholder: "Persona description",
+      profilePhonePlaceholder: "Phone model",
+      // Add more as needed
+    }
+  };
+
+  function updateUIText(lang) {
+    document.getElementById('app-title').textContent = translations[lang].appTitle;
+    document.getElementById('tile-generate').textContent = translations[lang].tileGenerate;
+    document.getElementById('tile-profiles').textContent = translations[lang].tileProfiles;
+    document.getElementById('tile-settings').textContent = translations[lang].tileSettings;
+    document.getElementById('back-btn').textContent = translations[lang].backBtn;
+    document.querySelector('#settings-panel h2').textContent = translations[lang].settingsTitle;
+    document.getElementById('api-key-input').placeholder = translations[lang].apiKeyPlaceholder;
+    document.getElementById('save-api-key-btn').textContent = translations[lang].saveApiKey;
+    document.getElementById('language-label').textContent = translations[lang].language;
+    document.querySelector('#dark-mode-toggle').parentElement.querySelector('span').textContent = translations[lang].darkMode;
+    document.querySelector('#profile-manager h2').textContent = translations[lang].profileTitle;
+    document.getElementById('profile-id-input').placeholder = translations[lang].profileIdPlaceholder;
+    document.getElementById('profile-persona-input').placeholder = translations[lang].profilePersonaPlaceholder;
+    document.getElementById('profile-phone-input').placeholder = translations[lang].profilePhonePlaceholder;
+    // Add more as needed
+  }
+
+  // Language selector logic
+  const languageSelect = document.getElementById('language-select');
+  let currentLang = localStorage.getItem('appLanguage') || 'pl';
+  languageSelect.value = currentLang;
+  updateUIText(currentLang);
+
+  languageSelect.addEventListener('change', (e) => {
+    currentLang = e.target.value;
+    localStorage.setItem('appLanguage', currentLang);
+    updateUIText(currentLang);
+  });
+  // --- TRANSLATION LOGIC END ---
+
   // Profile select list and image input
   const profileSelectList = document.getElementById('profile-select-list');
   const imageInput = document.getElementById('image-input');
