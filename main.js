@@ -197,28 +197,16 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       document.getElementById('import-group-personas').onclick = () => {
         personas.forEach(p => {
-          // Add to app's profile list (adapt as needed for your app's data structure)
-          const li = document.createElement('li');
-          li.className = "p-4 bg-white dark:bg-gray-800 rounded-xl shadow flex flex-col space-y-1";
-          li.innerHTML = `
-            <div><b>ID:</b> ${p.id}</div>
-            <div><b>Persona:</b> ${p.persona}</div>
-            <div><b>Telefon:</b> ${p.phone}</div>
-            <div><b>Social:</b> ${p.social}</div>
-            <div><b>Wspomnienia:</b> <ul class="list-disc ml-5">${p.memories.map(m => `<li>${m}</li>`).join('')}</ul></div>
-          `;
-          profileList.appendChild(li);
-          // Optionally, add to your app's internal data structure if needed
-          if (window.profiles) {
-            window.profiles.push({
-              id: p.id,
-              persona: p.persona,
-              phone: p.phone,
-              social: p.social,
-              memories: p.memories
-            });
-          }
+          profiles.push({
+            id: p.id,
+            persona: p.persona,
+            phone: p.phone,
+            social: p.social,
+            memories: p.memories
+          });
         });
+        saveProfiles();
+        renderProfiles();
         groupModal.classList.add('hidden');
       };
     } catch (err) {
