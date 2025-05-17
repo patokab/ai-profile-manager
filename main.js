@@ -449,14 +449,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (postType === 'new') {
           aiPrompt =
             `Jesteś osobą o następującym opisie:\n${persona}\n` +
-            // Memories are available but need not be mentioned every time
             `Masz swoje wspomnienia, ale nie musisz ich przywoływać w każdym wpisie. Używaj ich subtelnie, jeśli pasują do kontekstu.\n` +
-            `Na podstawie powyższych informacji oraz tematu: "${prompt}" wygeneruj gotowy, realistyczny wpis na x.com (Twitter) w formie naturalnego, autentycznego posta. Wpis nie powinien być suchym podsumowaniem persony, lecz brzmieć jak prawdziwa wypowiedź tej osoby. Nie twórz analizy ani sugestii, tylko treść wpisu.`;
+            `Na podstawie powyższych informacji oraz tematu: "${prompt}" wygeneruj gotowy, realistyczny wpis na x.com (Twitter) w formie naturalnego, autentycznego posta. Wpis ma być krótki, realistyczny, bez emoji, z lekką ironią lub sarkazmem, w stylu polskiego Twittera (możesz użyć "xd", "XD", czutki twitterowej). Nie twórz analizy ani sugestii, tylko treść wpisu.`;
         } else {
           aiPrompt =
             `Jesteś osobą o następującym opisie:\n${persona}\n` +
             `Masz swoje wspomnienia, ale nie musisz ich przywoływać w każdej odpowiedzi. Możesz je wykorzystać subtelnie, jeśli pasują do kontekstu.\n` +
-            `Na podstawie powyższych informacji oraz treści, na którą odpowiadasz: "${prompt}" wygeneruj gotową, realistyczną odpowiedź na x.com (Twitter). Odpowiedź powinna brzmieć jak naturalna, autentyczna komentarz tej osoby, a nie analiza.`;
+            `Na podstawie powyższych informacji oraz treści, na którą odpowiadasz: "${prompt}" wygeneruj gotową, realistyczną odpowiedź na x.com (Twitter). Odpowiedź ma być krótka, realistyczna, bez emoji, z lekką ironią lub sarkazmem, w stylu polskiego Twittera (możesz użyć "xd", "XD", czutki twitterowej). Nie twórz analizy ani sugestii, tylko treść odpowiedzi.`;
         }
         const response = await callOpenAIAPI(profile, aiPrompt, imageData);
         return { profile, response };
