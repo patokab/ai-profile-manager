@@ -126,6 +126,21 @@ document.addEventListener('DOMContentLoaded', () => {
           label.textContent = `${profile.id}${socialTag}`;
           div.appendChild(checkbox);
           div.appendChild(label);
+// --- SELECT/DESELECT ALL PROFILES ---
+const selectAllBtn = document.getElementById('select-all-btn');
+const deselectAllBtn = document.getElementById('deselect-all-btn');
+if (selectAllBtn) {
+  selectAllBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('#profile-select-list input[type="checkbox"]').forEach(cb => cb.checked = true);
+  });
+}
+if (deselectAllBtn) {
+  deselectAllBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('#profile-select-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+  });
+}
           profileSelectList.appendChild(div);
       });
   }
@@ -519,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   generateBtn.addEventListener('click', async () => {
-    const prompt = promptInput.value.trim();
+    let prompt = promptInput.value.trim();
     if (!prompt) {
       alert('Wprowadź temat wpisu lub treść, na którą odpowiadasz');
       return;
