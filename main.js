@@ -1,5 +1,7 @@
 console.log("main.js loaded");
+console.log('[DEBUG] DOMContentLoaded handler registered');
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[DEBUG] DOMContentLoaded fired');
   // --- TRANSLATION LOGIC START ---
   const translations = {
     pl: {
@@ -128,13 +130,64 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
   const profileList = document.getElementById('profile-list');
-  const profileForm = document.getElementById('profile-form');
+
+  // Modal profile form elements
+  const profileForm = document.getElementById('modal-profile-form');
   const idInput = document.getElementById('profile-id-input');
   const personaInput = document.getElementById('profile-persona-input');
   const phoneInput = document.getElementById('profile-phone-input');
   const socialInput = document.getElementById('profile-social-input');
   const memoriesInput = document.getElementById('profile-memories-input');
-  const addProfileBtn = document.getElementById('add-profile-btn');
+  const addProfileBtn = document.getElementById('save-profile-btn');
+
+  // Help modal logic
+  const openHelpModalBtn = document.getElementById('open-help-modal');
+  const helpModal = document.getElementById('help-modal');
+  const closeHelpModalBtn = document.getElementById('close-help-modal');
+
+  if (openHelpModalBtn && helpModal && closeHelpModalBtn) {
+    openHelpModalBtn.addEventListener('click', () => {
+      helpModal.classList.remove('hidden');
+    });
+    closeHelpModalBtn.addEventListener('click', () => {
+      helpModal.classList.add('hidden');
+    });
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) helpModal.classList.add('hidden');
+    });
+  }
+  const openProfileModalBtn = document.getElementById('open-profile-modal');
+  const profileModal = document.getElementById('profile-modal');
+  const closeProfileModalBtn = document.getElementById('close-profile-modal');
+
+  // Show modal for adding a new profile
+  openProfileModalBtn.addEventListener('click', () => {
+    profileForm.reset();
+    idInput.value = '';
+    personaInput.value = '';
+    phoneInput.value = '';
+    socialInput.value = '';
+    memoriesInput.value = '';
+    editingId = null;
+    addProfileBtn.textContent = 'Dodaj';
+    profileModal.classList.remove('hidden');
+  });
+
+  // Close modal
+  closeProfileModalBtn.addEventListener('click', () => {
+    profileModal.classList.add('hidden');
+  });
+  // Also close modal when clicking outside the modal content
+  profileModal.addEventListener('click', (e) => {
+    if (e.target === profileModal) profileModal.classList.add('hidden');
+  });
+  // Close modal on "Anuluj" button
+  const cancelProfileBtn = document.getElementById('cancel-profile-btn');
+  if (cancelProfileBtn) {
+    cancelProfileBtn.addEventListener('click', () => {
+      profileModal.classList.add('hidden');
+    });
+  }
 
   const promptInput = document.getElementById('prompt-input');
   const settingsForm = document.getElementById('settings-form');
@@ -284,14 +337,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function loadProfiles() {
     const data = localStorage.getItem('aiProfiles');
+    console.log('[DEBUG] loadProfiles() called. Data from localStorage:', data);
     profiles = data ? JSON.parse(data) : [];
+    console.log('[DEBUG] Profiles after load:', profiles);
   }
 
   function saveProfiles() {
+    console.log('[DEBUG] saveProfiles() called. Saving profiles:', profiles);
     localStorage.setItem('aiProfiles', JSON.stringify(profiles));
+    console.log('[DEBUG] Profiles saved to localStorage.');
   }
 
   function renderProfiles() {
+    console.log('[DEBUG] renderProfiles() called. Current profiles:', profiles);
     // Update profile selector list
     updateProfileSelectList();
     profileList.innerHTML = '';
@@ -324,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         memoriesInput.value = (profile.memories || []).join('\n');
         editingId = profile.id;
         addProfileBtn.textContent = 'Zapisz';
+        profileModal.classList.remove('hidden');
       });
 
       deleteBtn.addEventListener('click', () => {
@@ -476,6 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get post type (new or reply)
     const postType = document.getElementById('post-type-reply').checked ? 'reply' : 'new';
 
+    // Clear previous latest results before generating new ones
+    profiles.forEach(profile => { profile._latestResults = []; });
+
     resultsList.innerHTML = '';
     // Read image if provided
     let imageData = null;
@@ -541,12 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('item:', item);
         if (item.status === 'fulfilled') {
           const { profile, response } = item.value;
-          const li = document.createElement('li');
-          li.className = 'p-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded shadow';
-          li.innerHTML = `<span class="font-semibold">${profile.id}</span>: ${response}`;
-          resultsList.appendChild(li);
-          profile.history = profile.history || [];
-          profile.history.push({ prompt, response, image: imageData });
+          // Store latest results in a temporary array, not in profile.history
+          if (!profile._latestResults) profile._latestResults = [];
+          profile._latestResults.push({ prompt, response, image: imageData, edited: false });
         } else {
           // Show a user-friendly message in the results list
           const li = document.createElement('li');
@@ -556,12 +615,125 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Promise rejected for profile', idx, item.reason);
         }
       });
+
+      // --- Editable Results Rendering ---
+      // Only show the latest generated results (not profile.history)
+      resultsList.innerHTML = '';
+      profiles.forEach(profile => {
+        profile._latestResults = profile._latestResults || [];
+        profile._latestResults.forEach((entry, idx) => {
+          const li = document.createElement('li');
+          li.className = 'p-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded shadow mb-2 flex flex-col gap-2';
+          if (!entry._editing) {
+            li.innerHTML = `
+              <div>
+                <span class="font-semibold">${profile.id}</span>:
+                <span>${entry.response}</span>
+                ${entry.edited ? '<span class="ml-2 text-xs text-green-600 dark:text-green-400 font-semibold">Edytowano</span>' : ''}
+              </div>
+              <div class="flex gap-2">
+                <button class="edit-result-btn bg-blue-500 text-white px-2 py-1 rounded text-sm">Edytuj</button>
+                <button class="save-memory-btn bg-yellow-500 text-white px-2 py-1 rounded text-sm">Zapisz jako wspomnienie</button>
+              </div>
+            `;
+            li.querySelector('.edit-result-btn').addEventListener('click', () => {
+              entry._editing = true;
+              renderEditableResults();
+            });
+            li.querySelector('.save-memory-btn').addEventListener('click', () => {
+              profile.memories = profile.memories || [];
+              profile.memories.push(entry.response);
+              saveProfiles();
+              li.querySelector('.save-memory-btn').disabled = true;
+              li.querySelector('.save-memory-btn').textContent = 'Dodano do wspomnień';
+            });
+          } else {
+            li.innerHTML = `
+              <textarea class="edit-result-textarea w-full p-2 rounded border border-gray-300 dark:border-gray-600 mb-2 bg-white text-gray-900 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400" placeholder="Edytuj odpowiedź...">${entry.response}</textarea>
+              <div class="flex gap-2">
+                <button class="save-result-btn bg-green-500 text-white px-2 py-1 rounded text-sm">Zapisz</button>
+                <button class="cancel-result-btn bg-gray-400 text-white px-2 py-1 rounded text-sm">Anuluj</button>
+              </div>
+            `;
+            li.querySelector('.save-result-btn').addEventListener('click', () => {
+              const newText = li.querySelector('.edit-result-textarea').value;
+              entry.response = newText;
+              entry.edited = true;
+              entry._editing = false;
+              renderEditableResults();
+            });
+            li.querySelector('.cancel-result-btn').addEventListener('click', () => {
+              entry._editing = false;
+              renderEditableResults();
+            });
+          }
+          resultsList.appendChild(li);
+        });
+      });
+
+      function renderEditableResults() {
+        resultsList.innerHTML = '';
+        profiles.forEach(profile => {
+          profile._latestResults = profile._latestResults || [];
+          profile._latestResults.forEach((entry, idx) => {
+            const li = document.createElement('li');
+            li.className = 'p-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded shadow mb-2 flex flex-col gap-2';
+            if (!entry._editing) {
+              li.innerHTML = `
+                <div>
+                  <span class="font-semibold">${profile.id}</span>:
+                  <span>${entry.response}</span>
+                  ${entry.edited ? '<span class="ml-2 text-xs text-green-600 dark:text-green-400 font-semibold">Edytowano</span>' : ''}
+                </div>
+                <div class="flex gap-2">
+                  <button class="edit-result-btn bg-blue-500 text-white px-2 py-1 rounded text-sm">Edytuj</button>
+                  <button class="save-memory-btn bg-yellow-500 text-white px-2 py-1 rounded text-sm">Zapisz jako wspomnienie</button>
+                </div>
+              `;
+              li.querySelector('.edit-result-btn').addEventListener('click', () => {
+                entry._editing = true;
+                renderEditableResults();
+              });
+              li.querySelector('.save-memory-btn').addEventListener('click', () => {
+                profile.memories = profile.memories || [];
+                profile.memories.push(entry.response);
+                saveProfiles();
+                li.querySelector('.save-memory-btn').disabled = true;
+                li.querySelector('.save-memory-btn').textContent = 'Dodano do wspomnień';
+              });
+            } else {
+              li.innerHTML = `
+                <textarea class="edit-result-textarea w-full p-2 rounded border border-gray-300 dark:border-gray-600 mb-2 bg-white text-gray-900 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400" placeholder="Edytuj odpowiedź...">${entry.response}</textarea>
+                <div class="flex gap-2">
+                  <button class="save-result-btn bg-green-500 text-white px-2 py-1 rounded text-sm">Zapisz</button>
+                  <button class="cancel-result-btn bg-gray-400 text-white px-2 py-1 rounded text-sm">Anuluj</button>
+                </div>
+              `;
+              li.querySelector('.save-result-btn').addEventListener('click', () => {
+                const newText = li.querySelector('.edit-result-textarea').value;
+                entry.response = newText;
+                entry.edited = true;
+                entry._editing = false;
+                renderEditableResults();
+              });
+              li.querySelector('.cancel-result-btn').addEventListener('click', () => {
+                entry._editing = false;
+                renderEditableResults();
+              });
+            }
+            resultsList.appendChild(li);
+          });
+        });
+      }
+
       saveProfiles();
+      renderEditableResults();
     } catch (err) {
       console.error('Caught error:', err, err?.stack);
     }
   });
 
+  // Export always uses the latest (possibly edited) responses
   exportBtn.addEventListener('click', () => {
     let csv = 'ID,Odpowiedź\n';
     profiles.forEach(profile => {
@@ -574,6 +746,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'ai_responses.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  // TXT export logic (always uses the latest edited responses)
+  const exportTxtBtn = document.getElementById('export-txt-btn');
+  exportTxtBtn.addEventListener('click', () => {
+    console.log('Eksportuj do TXT button clicked');
+    let txt = '';
+    profiles.forEach(profile => {
+      (profile.history || []).forEach(entry => {
+        txt += entry.response + '\n';
+      });
+    });
+    txt = txt.trim(); // Remove trailing newline
+    console.log('TXT export content:', txt);
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ai_responses.txt';
     link.click();
     URL.revokeObjectURL(link.href);
   });
